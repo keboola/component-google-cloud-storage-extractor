@@ -59,6 +59,7 @@ class Component(CommonInterface):
             raise UserException("File must be a csv file")
 
         table = self.create_out_table_definition(file_name)
+        logging.info(f"Downloading {table.name} to storage")
         tmp_file = self.download_file(storage_client, bucket_name, table)
         logging.info(f"Blob {table.name} downloaded to storage")
         table.columns = self.write_results_get_columns(tmp_file, table.full_path)
