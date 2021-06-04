@@ -59,6 +59,8 @@ class StorageClient(storage.Client):
         return credentials, project_name
 
     def download_blob(self, bucket_name, source_blob_name, destination_file_name):
+        file_path = "".join(["/tmp/", source_blob_name])
         bucket = self.bucket(bucket_name)
         blob = bucket.blob(source_blob_name)
-        blob.download_to_filename(destination_file_name)
+        blob.download_to_filename(file_path)
+        return file_path
