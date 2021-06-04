@@ -54,6 +54,10 @@ class Component(CommonInterface):
             raise UserException(value_error)
 
         file_name = params.get(KEY_FILE_NAME)
+
+        if os.path.splitext(file_name)[-1] != ".csv":
+            raise UserException("File must be a csv file")
+
         table = self.create_out_table_definition(file_name)
         tmp_file = self.download_file(storage_client, bucket_name, table)
         logging.info(f"Blob {table.name} downloaded to storage")
