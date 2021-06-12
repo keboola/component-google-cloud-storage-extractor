@@ -54,9 +54,6 @@ class Component(CommonInterface):
 
         file_name = params.get(KEY_FILE_NAME)
 
-        if os.path.splitext(file_name)[-1] != ".csv":
-            raise UserException("File must be a csv file")
-
         output_destination = self.files_out_path
 
         self.download_file(storage_client, bucket_name, file_name, output_destination)
