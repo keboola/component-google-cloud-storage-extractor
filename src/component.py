@@ -1,7 +1,6 @@
 import logging
 import os
 import json
-import csv
 from pathlib import Path
 from keboola.component import CommonInterface
 from google_cloud_storage.client import StorageClient
@@ -58,31 +57,19 @@ class Component(CommonInterface):
         if os.path.splitext(file_name)[-1] != ".csv":
             raise UserException("File must be a csv file")
 
-        table = self.create_out_table_definition(file_name)
-        logging.info(f"Downloading {table.name} to storage")
-        tmp_file = self.download_file(storage_client, bucket_name, table)
-        logging.info(f"Blob {table.name} downloaded to storage")
-        table.columns = self.write_results_get_columns(tmp_file, table.full_path)
-        self.write_tabledef_manifest(table)
+        output_destination = self.files_out_path
+
+        self.download_file(storage_client, bucket_name, file_name, output_destination)
+        logging.info(f"Blob {file_name} downloaded to storage")
 
     @staticmethod
-    def download_file(storage_client, bucket_name, file):
+    def download_file(storage_client, bucket_name, file_name, output_destination):
         try:
-            return storage_client.download_blob(bucket_name, file.name, file.full_path)
+            return storage_client.download_blob(bucket_name, file_name, output_destination)
         except GoogleAuthError as google_error:
             raise UserException(f"Download failed after retries due to : {google_error}")
         except NotFound as not_found:
-            raise UserException(f"File {file.name} could not be found in bucket") from not_found
-
-    @staticmethod
-    def write_results_get_columns(in_table_path, out_table_path):
-        with open(in_table_path, mode="r") as in_file:
-            reader = csv.DictReader(in_file)
-            with open(out_table_path, mode='wt', encoding='utf-8', newline='') as out_file:
-                writer = csv.DictWriter(out_file, reader.fieldnames)
-                for result in reader:
-                    writer.writerow(result)
-                return reader.fieldnames
+            raise UserException(f"File {file_name} could not be found in bucket") from not_found
 
 
 class KeyCredentials:

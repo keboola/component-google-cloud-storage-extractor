@@ -1,4 +1,5 @@
 import logging
+import os
 from google.cloud import storage
 from google.auth.transport import requests
 from google.oauth2.credentials import Credentials as ClientIdCredentials
@@ -58,9 +59,9 @@ class StorageClient(storage.Client):
                      f"service account")
         return credentials, project_name
 
-    def download_blob(self, bucket_name, source_blob_name, destination_file_name):
-        file_path = "".join(["/tmp/", source_blob_name])
+    def download_blob(self, bucket_name, source_blob_name, output_destination):
+        file_path = os.path.join(output_destination, source_blob_name)
+        print(file_path)
         bucket = self.bucket(bucket_name)
         blob = bucket.blob(source_blob_name)
         blob.download_to_filename(file_path)
-        return file_path
