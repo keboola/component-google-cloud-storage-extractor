@@ -1,7 +1,9 @@
 import logging
 import os
 import json
+import ntpath
 from pathlib import Path
+from keboola.utils.header_normalizer import get_normalizer, NormalizerStrategy
 from keboola.component import CommonInterface
 from google_cloud_storage.client import StorageClient
 from google.auth.exceptions import GoogleAuthError
@@ -54,7 +56,10 @@ class Component(CommonInterface):
 
         file_name = params.get(KEY_FILE_NAME)
 
-        output_destination = self.files_out_path
+        out_folder = self.files_out_path
+        normalizer = get_normalizer(NormalizerStrategy.DEFAULT, forbidden_sub="_")
+        filename = normalizer.normalize_header([ntpath.basename(file_name)])[0]
+        output_destination = os.path.join(out_folder, filename)
 
         self.download_file(storage_client, bucket_name, file_name, output_destination)
         logging.info(f"Blob {file_name} downloaded to storage")
