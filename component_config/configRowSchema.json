@@ -1,10 +1,47 @@
 {
   "type": "object",
   "title": "Google Cloud Storage Writer",
-  "required": [
-    "bucket_name"
-  ],
+  "required": [],
   "properties": {
+    "bucket_name_array": {
+        "type": "array",
+        "title": "Bucket name",
+        "description": "Google Cloud Storage bucket name, e.g. my_gcs_bucket",
+        "format": "select",
+        "items": {
+          "enum": [],
+          "type": "string"
+        },
+        "options": {
+          "async": {
+            "label": "Load available buckets",
+            "action": "list_buckets"
+          }
+        },
+        "uniqueItems": true,
+        "propertyOrder": 1,
+        "minItems": 1,
+        "maxItems": 1
+    },
+    "file_names_array": {
+      "type": "array",
+      "title": "Files names",
+      "description": "Files names in Google Cloud Storage bucket",
+      "format": "select",
+      "items": {
+        "enum": [],
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "options": {
+          "async": {
+            "label": "Load available files",
+            "action": "list_files"
+          }
+        },
+      "minItems": 1,
+      "propertyOrder": 2
+    },
     "bucket_name": {
       "type": "string",
       "title": "Bucket name",

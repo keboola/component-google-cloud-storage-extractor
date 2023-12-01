@@ -15,7 +15,7 @@ CLIENT_ID_TOKEN_URI = "https://accounts.google.com/o/oauth2/token"
 
 class StorageClient(storage.Client):
 
-    def __init__(self, bucket_name, client_id_credentials=None, service_account_json_key=None):
+    def __init__(self, bucket_name=None, client_id_credentials=None, service_account_json_key=None):
         credentials, project_name = self._get_storage_credentials(bucket_name,
                                                                   client_id_credentials,
                                                                   service_account_json_key)

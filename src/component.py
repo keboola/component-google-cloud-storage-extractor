@@ -2,42 +2,37 @@ import logging
 import os
 import json
 import ntpath
-from pathlib import Path
 from keboola.utils.header_normalizer import get_normalizer, NormalizerStrategy
-from keboola.component import CommonInterface
+from keboola.component.base import ComponentBase, sync_action
+from keboola.component.sync_actions import SelectElement
 from google_cloud_storage.client import StorageClient
 from google.auth.exceptions import GoogleAuthError
 from google.api_core.exceptions import NotFound
 
-KEY_BUCKET_NAME = "bucket_name"
 KEY_SERVICE_ACCOUNT = "#service_account_key"
-KEY_FILE_NAME = "file_name"
 
-REQUIRED_PARAMETERS = [KEY_SERVICE_ACCOUNT, KEY_BUCKET_NAME, KEY_FILE_NAME]
+KEY_BUCKET_NAME = "bucket_name"
+KEY_BUCKET_NAME_ARRAY = "bucket_name_array"
+
+KEY_FILE_NAME = "file_name"
+KEY_FILE_NAMES_ARRAY = "file_names_array"
+
+REQUIRED_PARAMETERS = [KEY_SERVICE_ACCOUNT]
 REQUIRED_IMAGE_PARS = []
+
+logging.info("imported")
 
 
 class UserException(Exception):
     pass
 
 
-def get_local_data_path():
-    return Path(__file__).resolve().parent.parent.joinpath('data').as_posix()
-
-
-def get_data_folder_path():
-    data_folder_path = None
-    if not os.environ.get('KBC_DATADIR'):
-        data_folder_path = get_local_data_path()
-    return data_folder_path
-
-
-class Component(CommonInterface):
+class Component(ComponentBase):
     def __init__(self):
-        data_folder_path = get_data_folder_path()
-        super().__init__(data_folder_path=data_folder_path)
+        super().__init__()
+
         try:
-            self.validate_configuration(REQUIRED_PARAMETERS)
+            self.validate_configuration_parameters(REQUIRED_PARAMETERS)
             self.validate_image_parameters(REQUIRED_IMAGE_PARS)
         except ValueError as e:
             logging.exception(e)
@@ -46,7 +41,9 @@ class Component(CommonInterface):
     def run(self):
         params = self.configuration.parameters
         service_account_json_key = params.get(KEY_SERVICE_ACCOUNT)
-        bucket_name = params.get(KEY_BUCKET_NAME)
+
+        bucket_name = params.get(KEY_BUCKET_NAME) or params.get(KEY_BUCKET_NAME_ARRAY)[0]
+
         try:
             service_account_json_key = KeyCredentials(service_account_json_key).key
             storage_client = StorageClient(bucket_name,
@@ -54,15 +51,20 @@ class Component(CommonInterface):
         except ValueError as value_error:
             raise UserException(value_error)
 
-        file_name = params.get(KEY_FILE_NAME)
+        if params.get(KEY_FILE_NAME):
+            file_names = [params.get(KEY_FILE_NAME)]
+        else:
+            file_names = params.get(KEY_FILE_NAMES_ARRAY)
 
         out_folder = self.files_out_path
         normalizer = get_normalizer(NormalizerStrategy.DEFAULT, forbidden_sub="_")
-        filename = normalizer.normalize_header([ntpath.basename(file_name)])[0]
-        output_destination = os.path.join(out_folder, filename)
 
-        self.download_file(storage_client, bucket_name, file_name, output_destination)
-        logging.info(f"Blob {file_name} downloaded to storage")
+        for file_name in file_names:
+            filename = normalizer.normalize_header([ntpath.basename(file_name)])[0]
+            output_destination = os.path.join(out_folder, filename)
+
+            self.download_file(storage_client, bucket_name, file_name, output_destination)
+            logging.info(f"Blob {file_name} downloaded to storage")
 
     @staticmethod
     def download_file(storage_client, bucket_name, file_name, output_destination):
@@ -72,6 +74,48 @@ class Component(CommonInterface):
             raise UserException(f"Download failed after retries due to : {google_error}")
         except NotFound as not_found:
             raise UserException(f"File {file_name} could not be found in bucket") from not_found
+
+    @sync_action('list_buckets')
+    def list_buckets(self):
+        params = self.configuration.parameters
+        service_account_json = params.get(KEY_SERVICE_ACCOUNT)
+        try:
+            service_account_json_key = KeyCredentials(service_account_json).key
+            storage_client = StorageClient(service_account_json_key=service_account_json_key)
+            available_buckets = storage_client.list_buckets()
+            buckets_list = []
+            for bucket in available_buckets:
+                buckets_list.append(bucket.name)
+
+        except ValueError as value_error:
+            raise UserException(value_error)
+
+        except Exception as e:
+            raise UserException(e)
+
+        result_buckets = [SelectElement(value=bucket) for bucket in buckets_list]
+        return result_buckets
+
+    @sync_action('list_files')
+    def list_files(self):
+        params = self.configuration.parameters
+        service_account_json = params.get(KEY_SERVICE_ACCOUNT)
+        parent_bucket = params.get(KEY_BUCKET_NAME_ARRAY)
+
+        try:
+            service_account_json_key = KeyCredentials(service_account_json).key
+            storage_client = StorageClient(service_account_json_key=service_account_json_key)
+
+            blobs = []
+
+            for blob in storage_client.list_blobs(parent_bucket[0]):
+                blobs.append(blob.name)
+
+        except ValueError as value_error:
+            raise UserException(value_error)
+
+        result_files = [SelectElement(value=file) for file in blobs]
+        return result_files
 
 
 class KeyCredentials:
@@ -100,13 +144,11 @@ class KeyCredentials:
             raise UserException(f'Google service account key is missing mandatory fields: {missing_fields} ')
 
 
-"""
-        Main entrypoint
-"""
+# Main entrypoint
 if __name__ == "__main__":
     try:
         comp = Component()
-        comp.run()
+        comp.execute_action()
     except UserException as exc:
         logging.exception(exc)
         exit(1)
