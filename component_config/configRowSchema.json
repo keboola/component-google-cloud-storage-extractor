@@ -25,7 +25,7 @@
     },
     "file_names_array": {
       "type": "array",
-      "title": "Files names",
+      "title": "File names",
       "description": "Files names in Google Cloud Storage bucket",
       "format": "select",
       "items": {
@@ -41,18 +41,6 @@
         },
       "minItems": 1,
       "propertyOrder": 2
-    },
-    "bucket_name": {
-      "type": "string",
-      "title": "Bucket name",
-      "description": "Google Cloud Storage bucket name, e.g. my_gcs_bucket",
-      "propertyOrder": 10
-    },
-    "file_name": {
-      "type": "string",
-      "title": "File name",
-      "description": "File name in Google Cloud Storage bucket",
-      "propertyOrder": 10
     }
   }
 }
