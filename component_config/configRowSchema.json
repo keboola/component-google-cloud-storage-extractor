@@ -3,44 +3,105 @@
   "title": "Google Cloud Storage Writer",
   "required": [],
   "properties": {
-    "bucket_name_array": {
-        "type": "array",
-        "title": "Bucket name",
-        "description": "Google Cloud Storage bucket name, e.g. my_gcs_bucket",
-        "format": "select",
-        "items": {
-          "enum": [],
-          "type": "string"
+    "settings": {
+      "type": "object",
+      "title": "Settings",
+      "propertyOrder": 1,
+      "properties": {
+        "bucket_name_array": {
+          "type": "array",
+          "title": "Bucket name",
+          "description": "Google Cloud Storage bucket name, e.g. my_gcs_bucket",
+          "format": "select",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "options": {
+            "async": {
+              "label": "Load available buckets",
+              "action": "list_buckets"
+            },
+            "dependencies": {
+              "use_file_path": false
+            }
+          },
+          "uniqueItems": true,
+          "propertyOrder": 2,
+          "minItems": 1,
+          "maxItems": 1
         },
-        "options": {
-          "async": {
-            "label": "Load available buckets",
-            "action": "list_buckets"
+        "file_names_array": {
+          "type": "array",
+          "title": "File names",
+          "description": "Files names in Google Cloud Storage bucket",
+          "format": "select",
+          "items": {
+            "enum": [],
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "options": {
+            "async": {
+              "label": "Load available files",
+              "action": "list_files"
+            },
+            "dependencies": {
+              "use_file_path": false
+            }
+          },
+          "minItems": 1,
+          "propertyOrder": 3
+        },
+        "use_file_path": {
+          "title": "Use File Path",
+          "type": "boolean",
+          "propertyOrder": 1,
+          "format": "checkbox",
+          "description": "If checked file path or pattern will be used instead of file names."
+        },
+        "file_path": {
+          "title": "File Path",
+          "description": "Path to the file or files. Example: \"bucket/folder*/2023-*\"",
+          "type": "string",
+          "propertyOrder": 2,
+          "options": {
+            "dependencies": {
+              "use_file_path": true
+            }
           }
         },
-        "uniqueItems": true,
-        "propertyOrder": 1,
-        "minItems": 1,
-        "maxItems": 1
+        "new_files_only": {
+          "title": "Download only new files",
+          "description": "If set to true, downloads only files which were updated after last run of component.",
+          "type": "boolean",
+          "propertyOrder": 4,
+          "format": "checkbox"
+        }
+      }
     },
-    "file_names_array": {
-      "type": "array",
-      "title": "File names",
-      "description": "Files names in Google Cloud Storage bucket",
-      "format": "select",
-      "items": {
-        "enum": [],
-        "type": "string"
-      },
-      "uniqueItems": true,
-      "options": {
-          "async": {
-            "label": "Load available files",
-            "action": "list_files"
-          }
+    "destination": {
+      "type": "object",
+      "title": "Destination",
+      "propertyOrder": 5,
+      "properties": {
+        "custom_tag": {
+          "type": "string",
+          "title": "Custom Tag (optional)",
+          "description": "One or more tags separated by comma added to Keboola Storage for all downloaded files",
+          "propertyOrder": 1
         },
-      "minItems": 1,
-      "propertyOrder": 2
+        "permanent": {
+          "type": "boolean",
+          "title": "Permanent Files (optional)",
+          "default": false,
+          "format": "checkbox",
+          "description": "If set to true, downloaded files will be stored as permanent in Keboola storage. Otherwise, they will be deleted after 14 days.",
+          "propertyOrder": 2
+        }
+      }
     }
+
+
   }
 }
