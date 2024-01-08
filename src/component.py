@@ -40,7 +40,7 @@ class Component(ComponentBase):
         current_date_time = datetime.now()
 
         service_account_json = params.get(KEY_SERVICE_ACCOUNT)
-        new_files_only = self._configuration.settings.new_files_only
+        new_files_only = self._configuration.files.new_files_only
         out_folder = self.files_out_path
 
         try:
@@ -52,23 +52,28 @@ class Component(ComponentBase):
 
         blobs = []
 
-        if self._configuration.settings.file_path:  # using file path or wildcard
+        if self._configuration.files.file_name:  # using file path or wildcard
             available_buckets = storage_client.list_buckets()
 
             for bucket in available_buckets:
                 for blob in storage_client.list_blobs(bucket.name):
                     if not blob.name.endswith("/"):
-                        if fnmatch.fnmatch(bucket.name + "/" + blob.name, self._configuration.settings.file_path):
+                        if fnmatch.fnmatch(bucket.name + "/" + blob.name, self._configuration.files.file_name):
                             blobs.append(blob)
 
             downloaded_files = self.download_blobs(storage_client, out_folder, new_files_only, blobs)
 
         else:  # defined bucket and file names
-            bucket_name = self._configuration.bucket_name or self._configuration.settings.bucket_name_array[0]
+            bucket_name = self._configuration.bucket_name or self._configuration.files.bucket_name_array[0]
             file_names = [self._configuration.file_name] if self._configuration.file_name \
-                else self._configuration.settings.file_names_array
+                else self._configuration.files.file_names_array
 
-            blobs = self.get_blobs_from_names(storage_client, bucket_name, file_names)
+            if file_names:
+                blobs = self.get_blobs_from_names(storage_client, bucket_name, file_names)
+            else:
+                logging.info(f"Files are not defined. All files from the bucket {bucket_name} will be downloaded.")
+                blobs = [blob for blob in storage_client.list_blobs(bucket_name) if not blob.name.endswith("/")]
+
             downloaded_files = self.download_blobs(storage_client, out_folder, new_files_only, blobs)
 
         self._create_manifests(downloaded_files,

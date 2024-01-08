@@ -46,11 +46,11 @@ class ConfigurationBase:
 
 
 @dataclass
-class Settings(ConfigurationBase):
+class Files(ConfigurationBase):
     bucket_name_array: List[str] = field(default_factory=list)
     file_names_array: List[str] = field(default_factory=list)
     use_file_path: bool = False
-    file_path: str = ""
+    file_name: str = ""
     new_files_only: bool = False
 
 
@@ -62,7 +62,7 @@ class Destination(ConfigurationBase):
 
 @dataclass
 class Configuration(ConfigurationBase):
-    settings: Settings = field(default_factory=lambda: ConfigTree({}))
+    files: Files = field(default_factory=lambda: ConfigTree({}))
     destination: Destination = field(default_factory=lambda: ConfigTree({}))
     bucket_name: str = ""  # legacy config for compatibility
     file_name: str = ""  # legacy config for compatibility

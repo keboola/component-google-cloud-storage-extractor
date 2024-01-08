@@ -3,7 +3,7 @@
   "title": "Google Cloud Storage Writer",
   "required": [],
   "properties": {
-    "settings": {
+    "files": {
       "type": "object",
       "title": "Settings",
       "propertyOrder": 1,
@@ -60,7 +60,7 @@
           "format": "checkbox",
           "description": "If checked file path or pattern will be used instead of file names."
         },
-        "file_path": {
+        "file_name": {
           "title": "File Path",
           "description": "Path to the file or files. Example: \"bucket/folder*/2023-*\"",
           "type": "string",
@@ -84,6 +84,9 @@
       "type": "object",
       "title": "Destination",
       "propertyOrder": 5,
+      "options": {
+        "tooltip": "By default this component stores results in File Storage. It is possible to convert the result into the Table Storage using combination of Processors. For examples, see the documentation."
+      },
       "properties": {
         "custom_tag": {
           "type": "string",
