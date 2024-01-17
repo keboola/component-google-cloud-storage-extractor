@@ -13,6 +13,8 @@ from keboola.component.sync_actions import SelectElement
 from configuration import Configuration
 from google_cloud_storage.client import StorageClient
 
+KEY_FILES = "files"
+
 KEY_SERVICE_ACCOUNT = "#service_account_key"
 
 REQUIRED_PARAMETERS = [KEY_SERVICE_ACCOUNT]
@@ -173,22 +175,21 @@ class Component(ComponentBase):
         params = self.configuration.parameters
         service_account_json = params.get(KEY_SERVICE_ACCOUNT)
 
-        parent_bucket = params.get("settings", {}).get("bucket_name_array", [None])
+        parent_buckets = params.get(KEY_FILES, {}).get("bucket_name_array", [])
 
         try:
             service_account_json_key = KeyCredentials(service_account_json).key
             storage_client = StorageClient(service_account_json_key=service_account_json_key)
 
-            blobs = []
-
-            for blob in storage_client.list_blobs(parent_bucket[0]):
-                if not blob.name.endswith("/"):
-                    blobs.append(blob.name)
+            result_files = []
+            for bucket in parent_buckets:
+                for blob in storage_client.list_blobs(bucket):
+                    if not blob.name.endswith("/"):
+                        result_files.append(SelectElement(value=blob.name, label=f'{bucket}/{blob.name}'))
 
         except ValueError as value_error:
             raise UserException(value_error)
 
-        result_files = [SelectElement(value=file) for file in blobs]
         return result_files
 
 
