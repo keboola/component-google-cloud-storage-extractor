@@ -14,7 +14,8 @@ access can be used for this Extractor. After creating the service account, downl
 Each row can be configured to download any number of files from one Google Cloud Storage bucket.
 There are two ways to select files:
 - by a filepath including [wildcards](https://docs.python.org/3/library/fnmatch.html)
-  - for example: `bucket/2023-?/*.csv` or `*/*.xls`
+  - for example: `bucket/2023-?/*.csv` or `bucket/*/*.xls`
+  - **NOTE** The wildcard is not supported in the bucket name.
 
 - Selecting bucket and files manually.
   1) The configuration requires loading available buckets and selecting one.

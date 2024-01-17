@@ -2,8 +2,9 @@ import dataclasses
 import json
 from dataclasses import dataclass, field
 from typing import List
-from pyhocon.config_tree import ConfigTree
+
 import dataconf
+from pyhocon.config_tree import ConfigTree
 
 
 class ConfigurationBase:
@@ -47,7 +48,7 @@ class ConfigurationBase:
 
 @dataclass
 class Files(ConfigurationBase):
-    bucket_name_array: List[str] = field(default_factory=list)
+    bucket_name: str
     file_names_array: List[str] = field(default_factory=list)
     use_file_path: bool = False
     file_name: str = ""

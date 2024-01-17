@@ -8,15 +8,12 @@
       "title": "Settings",
       "propertyOrder": 1,
       "properties": {
-        "bucket_name_array": {
-          "type": "array",
+        "bucket_name": {
+          "type": "string",
           "title": "Bucket name",
           "description": "Google Cloud Storage bucket name, e.g. my_gcs_bucket",
+          "enum": [],
           "format": "select",
-          "items": {
-            "enum": [],
-            "type": "string"
-          },
           "options": {
             "async": {
               "label": "Load available buckets",
@@ -43,7 +40,7 @@
           "uniqueItems": true,
           "options": {
             "inputAttributes": {
-              "placeholder": "Download all files in selected buckets"
+              "placeholder": "Download all files in selected bucket"
             },
             "async": {
               "label": "Load available files",

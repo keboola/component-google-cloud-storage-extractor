@@ -63,7 +63,7 @@ class Component(ComponentBase):
                     blobs.append(blob)
 
         else:  # defined bucket and file names
-            bucket_name = self._configuration.bucket_name or self._configuration.files.bucket_name_array[0]
+            bucket_name = self._configuration.bucket_name or self._configuration.files.bucket_name
             file_names = [self._configuration.file_name] if self._configuration.file_name \
                 else self._configuration.files.file_names_array
 
@@ -165,14 +165,11 @@ class Component(ComponentBase):
             service_account_json_key = KeyCredentials(service_account_json).key
             storage_client = StorageClient(service_account_json_key=service_account_json_key)
             available_buckets = storage_client.list_buckets()
-            buckets_list = []
-            for bucket in available_buckets:
-                buckets_list.append(bucket.name)
 
         except ValueError as value_error:
             raise UserException(value_error)
 
-        result_buckets = [SelectElement(value=bucket) for bucket in buckets_list]
+        result_buckets = [SelectElement(value=bucket.name) for bucket in available_buckets]
         return result_buckets
 
     @sync_action('list_files')
@@ -180,17 +177,16 @@ class Component(ComponentBase):
         params = self.configuration.parameters
         service_account_json = params.get(KEY_SERVICE_ACCOUNT)
 
-        parent_buckets = params.get(KEY_FILES, {}).get("bucket_name_array", [])
+        parent_bucket = params.get(KEY_FILES, {}).get("bucket_name", [])
 
         try:
             service_account_json_key = KeyCredentials(service_account_json).key
             storage_client = StorageClient(service_account_json_key=service_account_json_key)
 
             result_files = []
-            for bucket in parent_buckets:
-                for blob in storage_client.list_blobs(bucket):
-                    if not blob.name.endswith("/"):
-                        result_files.append(SelectElement(value=blob.name, label=f'{bucket}/{blob.name}'))
+            for blob in storage_client.list_blobs(parent_bucket):
+                if not blob.name.endswith("/"):
+                    result_files.append(SelectElement(value=blob.name, label=blob.name))
 
         except ValueError as value_error:
             raise UserException(value_error)
