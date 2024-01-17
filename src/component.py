@@ -85,9 +85,14 @@ class Component(ComponentBase):
 
         """
         if self._configuration.files.file_name.startswith("/"):
-            return self._configuration.files.file_name.split("/")[1]
+            bucket_name = self._configuration.files.file_name.split("/")[1]
         else:
-            return self._configuration.files.file_name.split("/")[0]
+            bucket_name = self._configuration.files.file_name.split("/")[0]
+
+        if "*" in bucket_name:
+            raise UserException("Bucket name cannot contain wildcard character *")
+
+        return bucket_name
 
     def download_blobs(self, storage_client, out_folder, new_files_only, blobs) -> List[str]:
         downloaded_files = []
