@@ -48,7 +48,7 @@ class ConfigurationBase:
 
 @dataclass
 class Files(ConfigurationBase):
-    bucket_name: str
+    bucket_name: str = ""
     file_names_array: List[str] = field(default_factory=list)
     use_file_path: bool = False
     file_name: str = ""
