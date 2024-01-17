@@ -4,6 +4,7 @@
   "properties": {
     "#service_account_key": {
       "type": "string",
+      "format": "password",
       "title": "Service Account Key",
       "description": "JSON key downloaded from GCP service account",
       "propertyOrder": 1

@@ -1,2 +1,1 @@
-This component allows you to upload files and tables to Google Cloud Storage and if necessary append a timestamp 
-to the file name to keep historical versions of files.
+This component allows you to download files and tables from Google Cloud Storage to file storage. Further manipulation, such as storing a file as a table, can be accomplished using a [processors](https://components.keboola.com/components?type=processor).

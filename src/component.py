@@ -1,68 +1,113 @@
 import logging
 import os
 import json
-import ntpath
-from pathlib import Path
-from keboola.utils.header_normalizer import get_normalizer, NormalizerStrategy
-from keboola.component import CommonInterface
+import fnmatch
+from datetime import datetime
+from typing import List
+from keboola.component.base import ComponentBase, sync_action
+from keboola.component.sync_actions import SelectElement
+from configuration import Configuration
+
 from google_cloud_storage.client import StorageClient
 from google.auth.exceptions import GoogleAuthError
 from google.api_core.exceptions import NotFound
 
-KEY_BUCKET_NAME = "bucket_name"
 KEY_SERVICE_ACCOUNT = "#service_account_key"
-KEY_FILE_NAME = "file_name"
 
-REQUIRED_PARAMETERS = [KEY_SERVICE_ACCOUNT, KEY_BUCKET_NAME, KEY_FILE_NAME]
+REQUIRED_PARAMETERS = [KEY_SERVICE_ACCOUNT]
 REQUIRED_IMAGE_PARS = []
+
+logging.info("imported")
 
 
 class UserException(Exception):
     pass
 
 
-def get_local_data_path():
-    return Path(__file__).resolve().parent.parent.joinpath('data').as_posix()
-
-
-def get_data_folder_path():
-    data_folder_path = None
-    if not os.environ.get('KBC_DATADIR'):
-        data_folder_path = get_local_data_path()
-    return data_folder_path
-
-
-class Component(CommonInterface):
+class Component(ComponentBase):
     def __init__(self):
-        data_folder_path = get_data_folder_path()
-        super().__init__(data_folder_path=data_folder_path)
-        try:
-            self.validate_configuration(REQUIRED_PARAMETERS)
-            self.validate_image_parameters(REQUIRED_IMAGE_PARS)
-        except ValueError as e:
-            logging.exception(e)
-            exit(1)
+        super().__init__()
+
+    def _init_configuration(self) -> None:
+        self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
+        self._configuration: Configuration = Configuration.load_from_dict(self.configuration.parameters)
 
     def run(self):
+
         params = self.configuration.parameters
-        service_account_json_key = params.get(KEY_SERVICE_ACCOUNT)
-        bucket_name = params.get(KEY_BUCKET_NAME)
+        self._init_configuration()
+
+        current_date_time = datetime.now()
+
+        service_account_json = params.get(KEY_SERVICE_ACCOUNT)
+        new_files_only = self._configuration.files.new_files_only
+        out_folder = self.files_out_path
+
         try:
-            service_account_json_key = KeyCredentials(service_account_json_key).key
-            storage_client = StorageClient(bucket_name,
-                                           service_account_json_key=service_account_json_key)
+            service_account_json_key = KeyCredentials(service_account_json).key
+            storage_client = StorageClient(service_account_json_key=service_account_json_key)
+
         except ValueError as value_error:
             raise UserException(value_error)
 
-        file_name = params.get(KEY_FILE_NAME)
+        blobs = []
 
-        out_folder = self.files_out_path
-        normalizer = get_normalizer(NormalizerStrategy.DEFAULT, forbidden_sub="_")
-        filename = normalizer.normalize_header([ntpath.basename(file_name)])[0]
-        output_destination = os.path.join(out_folder, filename)
+        if self._configuration.files.file_name:  # using file path or wildcard
+            available_buckets = storage_client.list_buckets()
 
-        self.download_file(storage_client, bucket_name, file_name, output_destination)
-        logging.info(f"Blob {file_name} downloaded to storage")
+            for bucket in available_buckets:
+                for blob in storage_client.list_blobs(bucket.name):
+                    if not blob.name.endswith("/"):
+                        if fnmatch.fnmatch(bucket.name + "/" + blob.name, self._configuration.files.file_name):
+                            blobs.append(blob)
+
+            downloaded_files = self.download_blobs(storage_client, out_folder, new_files_only, blobs)
+
+        else:  # defined bucket and file names
+            bucket_name = self._configuration.bucket_name or self._configuration.files.bucket_name_array[0]
+            file_names = [self._configuration.file_name] if self._configuration.file_name \
+                else self._configuration.files.file_names_array
+
+            if file_names:
+                blobs = self.get_blobs_from_names(storage_client, bucket_name, file_names)
+            else:
+                logging.info(f"Files are not defined. All files from the bucket {bucket_name} will be downloaded.")
+                blobs = [blob for blob in storage_client.list_blobs(bucket_name) if not blob.name.endswith("/")]
+
+            downloaded_files = self.download_blobs(storage_client, out_folder, new_files_only, blobs)
+
+        self._create_manifests(downloaded_files,
+                               self._configuration.destination.custom_tag,
+                               self._configuration.destination.permanent)
+
+        self.write_state_file({"last_run": current_date_time.isoformat()})
+
+    def download_blobs(self, storage_client, out_folder, new_files_only, blobs) -> List[str]:
+        downloaded_files = []
+        last_run = datetime.fromisoformat(self.get_state_file().get("last_run", "2000-01-01T15:05:36.675730"))
+
+        for blob in blobs:
+            if not new_files_only or (new_files_only and blob.updated.replace(tzinfo=None) > last_run):
+                filename = f'{blob.bucket.name}/{blob.name}'
+                output_destination = os.path.join(out_folder, filename.replace("/", "_"))
+                self.download_file(storage_client, blob.bucket.name, blob.name, output_destination)
+                downloaded_files.append(filename)
+                logging.info(f"Blob {filename} downloaded to storage")
+
+            elif new_files_only:
+                logging.info(f"Blob {blob.name} was not downloaded because it was not modified since last run")
+
+        return downloaded_files
+
+    @staticmethod
+    def get_blobs_from_names(storage_client, bucket, files) -> List:
+        blobs = []
+
+        for blob in storage_client.list_blobs(bucket):
+            if blob.name in files:
+                blobs.append(blob)
+
+        return blobs
 
     @staticmethod
     def download_file(storage_client, bucket_name, file_name, output_destination):
@@ -72,6 +117,58 @@ class Component(CommonInterface):
             raise UserException(f"Download failed after retries due to : {google_error}")
         except NotFound as not_found:
             raise UserException(f"File {file_name} could not be found in bucket") from not_found
+
+    def _create_manifests(self, downloaded_files, tags, permanent) -> None:
+
+        tags = tags.split(",")
+
+        if permanent:
+            logging.info("Downloaded files will be stored as permanent files.")
+
+        for filename in downloaded_files:
+            file_def = self.create_out_file_definition(filename, tags=tags, is_permanent=permanent)
+            self.write_manifest(file_def)
+
+    @sync_action('list_buckets')
+    def list_buckets(self):
+        params = self.configuration.parameters
+        service_account_json = params.get(KEY_SERVICE_ACCOUNT)
+        try:
+            service_account_json_key = KeyCredentials(service_account_json).key
+            storage_client = StorageClient(service_account_json_key=service_account_json_key)
+            available_buckets = storage_client.list_buckets()
+            buckets_list = []
+            for bucket in available_buckets:
+                buckets_list.append(bucket.name)
+
+        except ValueError as value_error:
+            raise UserException(value_error)
+
+        result_buckets = [SelectElement(value=bucket) for bucket in buckets_list]
+        return result_buckets
+
+    @sync_action('list_files')
+    def list_files(self):
+        params = self.configuration.parameters
+        service_account_json = params.get(KEY_SERVICE_ACCOUNT)
+
+        parent_bucket = params.get("settings", {}).get("bucket_name_array", [None])
+
+        try:
+            service_account_json_key = KeyCredentials(service_account_json).key
+            storage_client = StorageClient(service_account_json_key=service_account_json_key)
+
+            blobs = []
+
+            for blob in storage_client.list_blobs(parent_bucket[0]):
+                if not blob.name.endswith("/"):
+                    blobs.append(blob.name)
+
+        except ValueError as value_error:
+            raise UserException(value_error)
+
+        result_files = [SelectElement(value=file) for file in blobs]
+        return result_files
 
 
 class KeyCredentials:
@@ -100,13 +197,11 @@ class KeyCredentials:
             raise UserException(f'Google service account key is missing mandatory fields: {missing_fields} ')
 
 
-"""
-        Main entrypoint
-"""
+# Main entrypoint
 if __name__ == "__main__":
     try:
         comp = Component()
-        comp.run()
+        comp.execute_action()
     except UserException as exc:
         logging.exception(exc)
         exit(1)
