@@ -1,6 +1,7 @@
 import fnmatch
 import json
 import logging
+import ntpath
 import os
 from datetime import datetime
 from typing import List
@@ -100,8 +101,8 @@ class Component(ComponentBase):
 
         for blob in blobs:
             if not new_files_only or (new_files_only and blob.updated.replace(tzinfo=None) > last_run):
-                filename = f'{blob.bucket.name}/{blob.name}'
-                output_destination = os.path.join(out_folder, filename.replace("/", "_"))
+                filename = self._build_result_file_name(blob.bucket.name, blob.name)
+                output_destination = os.path.join(out_folder, filename)
                 self.download_file(storage_client, blob.bucket.name, blob.name, output_destination)
                 downloaded_files.append(filename)
                 logging.info(f"Blob {filename} downloaded to storage")
@@ -110,6 +111,24 @@ class Component(ComponentBase):
                 logging.info(f"Blob {blob.name} was not downloaded because it was not modified since last run")
 
         return downloaded_files
+
+    def _build_result_file_name(self, bucket_name: str, blob_name: str) -> str:
+        if self._is_legacy_config():
+            logging.warning("Running legacy configuration mode. (Result files do not contain the entire blob path.")
+            return ntpath.basename(blob_name)
+        else:
+            return f'{bucket_name}_{blob_name}'.replace("/", "_")
+
+    def _is_legacy_config(self) -> bool:
+        """
+        Check if the configuration is legacy (bucket_name and file_name are defined in the root of the configuration)
+        Returns:
+
+        """
+        if self._configuration.file_name or self._configuration.bucket_name:
+            return True
+        else:
+            return False
 
     @staticmethod
     def get_blobs_from_names(storage_client: StorageClient, bucket: str, files: List[str] = None) -> List:
@@ -152,10 +171,11 @@ class Component(ComponentBase):
 
         if permanent:
             logging.info("Downloaded files will be stored as permanent files.")
-
-        for filename in downloaded_files:
-            file_def = self.create_out_file_definition(filename, tags=tags, is_permanent=permanent)
-            self.write_manifest(file_def)
+        # create manifest only if tags or permanent is set (otherwise user defines manifest in the kbc ui)
+        if tags or permanent:
+            for filename in downloaded_files:
+                file_def = self.create_out_file_definition(filename, tags=tags, is_permanent=permanent)
+                self.write_manifest(file_def)
 
     @sync_action('list_buckets')
     def list_buckets(self):
