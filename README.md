@@ -1,34 +1,34 @@
-# Google Cloud Storage Extractor
+# Google Cloud Storage Data Source
 
-This component allows you to download files from Google Cloud Storage into Keboola and apply processors. 
+This component enables you to download files from Google Cloud Storage into Keboola and apply processors. 
 
 **Table of contents:**  
   
 [TOC]
 
 ## Authorization
-Authorization is done via a Google Service Account. Create an account with the permission to list buckets and files, and to read files. Storage Admin
-access can be used for this Extractor. After creating the service account, download the JSON key and copy and paste it into the authorization section in the configuration.
+Authorization is done via a Google service account. Create an account with permission to list buckets and files and to read files. You can use Storage Admin
+access for this data source. After creating the service account, download the JSON key and copy and paste it into the authorization section in the configuration.
 
 ## Row configuration
 Each row can be configured to download any number of files from one Google Cloud Storage bucket.
 There are two ways to select files:
-- by a filepath including [wildcards](https://docs.python.org/3/library/fnmatch.html)
-  - for example: `bucket/2023-?/*.csv` or `bucket/*/*.xls`
-  - **NOTE** The wildcard is not supported in the bucket name.
+- Using a file path, including [wildcards](https://docs.python.org/3/library/fnmatch.html).
+  - Example: `bucket/2023-?/*.csv` or `bucket/*/*.xls`
+  - **Note:** The wildcard is not supported in the bucket name.
 
-- Selecting bucket and files manually.
+- Selecting a bucket and files manually.
   1) The configuration requires loading available buckets and selecting one.
-  2) After saving, it enables the listing and selection of files within the chosen bucket.
+  2) After saving, it enables listing and selecting files within the chosen bucket.
 
-In each row can be defined a storage tags used for all output files of the given row. Also the downloaded files can be stored permanently in the Storage instead of default 14 days retention.
+For each row, you can define storage tags that will be used for all output files of the given row. Also, the downloaded files can be stored in Storage permanently instead of the default 14-day retention.
 
-Each row can have its own processors applied to the output.
+Each row can have its processors applied to the output.
 Each file is downloaded to the files directory in data, so a move processor must be applied to send it to a table.
 
 ## Applying processors
 
-To download a csv file to a table, the following processors should be applied:
+To download a CSV file to a table, apply the following processors:
 ```json
 {
   "before": [],
@@ -53,7 +53,7 @@ To download a csv file to a table, the following processors should be applied:
 }
 ``` 
 
-To download an xls or xlsx file and save it to tables, the following processors should be applied: 
+To download XLS or XLSX files and save them to tables, apply the following processors: 
 
 ```json
 {

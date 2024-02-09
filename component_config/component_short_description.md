@@ -1,1 +1,1 @@
-Google Cloud Storage is a online file storage services for storing data on the Google Cloud Platform
+Google Cloud Storage is a service for storing files of any format in Google Cloud.
