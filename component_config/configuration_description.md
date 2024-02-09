@@ -11,7 +11,7 @@ There are two ways to select files:
 
 - Selecting a bucket and files manually.
   1) The configuration requires loading available buckets and selecting one.
-  2) After saving, it enables the listing and selecting of files within the chosen bucket.
+  2) After saving, it enables listing and selecting files within the chosen bucket.
 
 For each row, you can define storage tags that will be used for all output files of the given row. Also, the downloaded files can be stored in Storage permanently instead of the default 14-day retention.
 
