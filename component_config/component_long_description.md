@@ -1,1 +1,1 @@
-This component allows you to download files and tables from Google Cloud Storage to file storage. Further manipulation, such as storing a file as a table, can be accomplished using a [processors](https://components.keboola.com/components?type=processor).
+This connector enables you to download files and tables from Google Cloud Storage to your Keboola file storage. You can further manipulate the data (e.g., store files as tables) using [processors](https://components.keboola.com/components?type=processor).
