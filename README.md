@@ -23,7 +23,7 @@ There are two ways to select files:
 
 For each row, you can define storage tags that will be used for all output files of the given row. Also, the downloaded files can be stored in Storage permanently instead of the default 14-day retention.
 
-Each row can have its processors applied to the output.
+Each row can have processors applied to the output.
 Each file is downloaded to the files directory in data, so a move processor must be applied to send it to a table.
 
 ## Applying processors
