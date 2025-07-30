@@ -27,8 +27,8 @@ Each row can have processors applied to the output.
 Each file is downloaded to the files directory in data, so a move processor must be applied to send it to a table.
 
 ## Applying processors
-
 To download a CSV file to a table, apply the following processors:
+
 ```json
 {
   "before": [],
@@ -38,7 +38,9 @@ To download a CSV file to a table, apply the following processors:
         "component": "keboola.processor-move-files"
       },
       "parameters": {
-        "direction": "tables"
+        "direction": "tables",
+        "addCsvSuffix": false,
+        "folder": "support-test"
       }
     },
     {
@@ -48,10 +50,18 @@ To download a CSV file to a table, apply the following processors:
       "parameters": {
         "columns_from": "header"
       }
+    },
+    {
+      "definition": {
+        "component": "keboola.processor-skip-lines"
+      },
+      "parameters": {
+        "lines": 1
+      }
     }
   ]
 }
-``` 
+```
 
 To download XLS or XLSX files and save them to tables, apply the following processors: 
 
