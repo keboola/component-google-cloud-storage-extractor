@@ -1,18 +1,20 @@
 FROM python:3.13-slim
-ENV PYTHONIOENCODING=utf-8
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+WORKDIR /code/
+
+COPY pyproject.toml .
+COPY uv.lock .
+
+
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+RUN uv sync --all-groups --frozen
+COPY src/ src
 
 COPY /src /code/src/
 COPY /tests /code/tests/
 COPY /scripts /code/scripts/
-COPY requirements.txt /code/requirements.txt
 COPY flake8.cfg /code/flake8.cfg
 COPY deploy.sh /code/deploy.sh
-
-RUN pip install flake8
-
-RUN pip install -r /code/requirements.txt
-
-WORKDIR /code/
 
 
 CMD ["python", "-u", "/code/src/component.py"]

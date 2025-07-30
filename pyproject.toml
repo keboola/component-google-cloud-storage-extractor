@@ -1,0 +1,15 @@
+[project]
+name = "component-google-cloud-storage-extractor"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "dataconf==2.3.0",
+    "flake8>=7.3.0",
+    "freezegun==1.5.3",
+    "google-cloud-storage==2.13.0",
+    "keboola-component==1.4.4",
+    "keboola-http-client==1.0.0",
+    "keboola-utils==1.1.0",
+    "mock==5.1.0",
+    "pyhocon==0.3.60",
+]
