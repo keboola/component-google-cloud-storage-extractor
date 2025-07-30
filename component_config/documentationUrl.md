@@ -1,0 +1,1 @@
+https://github.com/keboola/component-google-cloud-storage-extractor/blob/master/README.md
