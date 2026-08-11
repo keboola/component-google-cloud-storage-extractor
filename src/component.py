@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from typing import List
 
+from dataconf.exceptions import TypeConfigException
 from google.api_core.exceptions import NotFound
 from google.auth.exceptions import GoogleAuthError
 from keboola.component.base import ComponentBase, sync_action
@@ -34,7 +35,14 @@ class Component(ComponentBase):
 
     def _init_configuration(self) -> None:
         self.validate_configuration_parameters(Configuration.get_dataclass_required_parameters())
-        self._configuration: Configuration = Configuration.load_from_dict(self.configuration.parameters)
+        try:
+            self._configuration: Configuration = Configuration.load_from_dict(self.configuration.parameters)
+        except TypeConfigException as config_error:
+            # A parameter has an unexpected type - typically an empty (null) entry left behind in a list,
+            # e.g. a blank row in the file names list. Surface it as a user error instead of an internal one.
+            raise UserException(f"The component configuration is invalid: {config_error}. Please check that "
+                                f"parameter in the configuration - it is empty or has an unexpected type "
+                                f"(for example a blank entry in the list of file names).") from config_error
 
     def run(self):
 
