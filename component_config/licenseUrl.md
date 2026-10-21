@@ -1,1 +1,1 @@
-https://www.keboola.com/terms-and-conditions
+https://github.com/keboola/component-google-cloud-storage-extractor/blob/master/LICENSE.md
